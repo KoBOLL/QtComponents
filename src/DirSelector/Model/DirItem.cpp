@@ -24,6 +24,12 @@ DirItem::DirItem(const QString& path, DirItem* parent, int row,
   switch (_type)
   {
   case Directory:
+  case NetworkComputer:
+  case HardDrive:
+  case FloppyDrive:
+  case CDDrive:
+  case DVDDrive:
+  case NetDrive:
   {
     QDirIterator it(_path + "/", QDir::AllDirs | QDir::NoDotAndDotDot);
     while (it.hasNext())
@@ -46,7 +52,7 @@ DirItem::DirItem(const QString& path, DirItem* parent, int row,
   }
   case Network:
     _unpopulatedCount = 1;
-   break;
+    break;
   case Root:
   {
     _childs.emplace_back(new DirItem("", this, 0, Computer));
@@ -106,6 +112,7 @@ bool DirItem::canFetchMore() const
 
 bool DirItem::hasChilds() const
 {
+  //qDebug() << _childCount << _unpopulatedCount;
   return (_childCount > 0) || (_unpopulatedCount > 0);
 }
 
@@ -137,6 +144,11 @@ int DirItem::row() const
   return _row;
 }
 
+DirItem::DirItemType DirItem::type() const
+{
+  return _type;
+}
+
 void DirItem::_populate()
 {
   int row = 0;
@@ -147,12 +159,14 @@ void DirItem::_populate()
   {
     if (_terminatePopulating == true)
     {
-      _childCount = row;
       emit itemsAdded();
       break;
     }
 
-    _childs.emplace_back(new DirItem(entry, this, row));
+    if (_type == Computer)
+      _childs.emplace_back(new DirItem(entry, this, row, _getDeviceType(entry)));
+    else
+      _childs.emplace_back(new DirItem(entry, this, row));
     _unpopulatedCount--;
 
     if (row % 100 == 0)
@@ -191,22 +205,55 @@ void DirItem::_populateNetwork()
         if (pTmpBuf == NULL)
           break;
 
+        if (_terminatePopulating == true)
+          break;
+
         //qDebug() << "Platform:" << pTmpBuf->sv101_platform_id;
         //qDebug() << "Name:" << QString::fromWCharArray(pTmpBuf->sv101_name);
         //qDebug() << "Type:" << pTmpBuf->sv101_type;
         QString servName = QString::fromWCharArray(pTmpBuf->sv101_name);
-        _childs.emplace_back(
-          new DirItem("//" + servName, this, row, Directory));
-
-        _childCount = row;
+        _childs.emplace_back(new DirItem("//" + servName, this, row, NetworkComputer));
+        _childCount = row + 1;
         pTmpBuf++;
+        emit itemsAdded();
       }
     }
   }
   if (pBuf != NULL)
     NetApiBufferFree(pBuf);
 
+  //_childs.emplace_back(new DirItem("//DEVSERV1", this, _childCount, Directory));
+  //_childCount += 1;
+
+  _unpopulatedCount = 0;
   _populating = false;
-  _childCount = dwEntriesRead;
-  emit itemsAdded();
+}
+
+DirItem::DirItemType DirItem::_getDeviceType(const QString& devicePath)
+{
+  DirItem::DirItemType result;
+  UINT type = GetDriveType((wchar_t *)devicePath.utf16());
+  switch (type)
+  {
+  case DRIVE_REMOVABLE:
+    result = FloppyDrive;
+    break;
+  case DRIVE_FIXED:
+    result = HardDrive;
+    break;
+  case DRIVE_REMOTE:
+    result = NetDrive;
+    break;
+  case DRIVE_CDROM:
+    result = CDDrive;
+    break;
+  case DRIVE_RAMDISK:
+  case DRIVE_UNKNOWN:
+  case DRIVE_NO_ROOT_DIR:
+  default:
+    result = Directory;
+    break;
+  }
+
+  return result;
 }

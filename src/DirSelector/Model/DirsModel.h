@@ -2,6 +2,7 @@
 #define DIRS_MODEL_H__
 
 #include <QAbstractItemModel>
+#include <QPixmap>
 #include "DirItem.h"
 
 class DirsModel: public QAbstractItemModel
@@ -30,7 +31,9 @@ public:
 
 private:
   DirItem* _rootItem;
+  std::map<DirItem::DirItemType, QPixmap> _icons;
 
+  void _initIconsCashe();
   void _onDirItemsAdded();
 
   DirsModel(const DirsModel&) = delete;

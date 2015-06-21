@@ -19,8 +19,14 @@ public:
   enum DirItemType
   {
     Directory,
+    HardDrive,
+    FloppyDrive,
+    CDDrive,
+    DVDDrive,
+    NetDrive,
     Computer,
     Network,
+    NetworkComputer,
     Root
   };
 
@@ -36,6 +42,7 @@ public:
   DirItem* child(int id) const;
   void populate();
   int row() const;
+  DirItemType type() const;
 
 private:
   QString _path;
@@ -53,6 +60,7 @@ private:
   std::vector<QString> _unpopulated;
   std::vector<DirItem*> _childs;
 
+  DirItemType _getDeviceType(const QString& devicePath);
   void _populate();
   void _populateNetwork();
 
