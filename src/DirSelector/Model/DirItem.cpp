@@ -4,8 +4,10 @@
 #include <QDirIterator>
 #include <QDir>
 
-#include <windows.h>
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
 #include <lm.h>
+#endif //Q_OS_WIN
 
 #include "DirItem.h"
 
@@ -26,7 +28,7 @@ DirItem::DirItem(const QString& path, DirItem* parent, int row,
   case Directory:
   case NetworkComputer:
   case HardDrive:
-  case FloppyDrive:
+  case FlashDrive:
   case CDDrive:
   case DVDDrive:
   case NetDrive:
@@ -188,6 +190,7 @@ void DirItem::_populate()
 
 void DirItem::_populateNetwork()
 {
+#ifdef Q_OS_WIN
   NET_API_STATUS status;
   LPSERVER_INFO_101 pBuf = NULL;
   LPSERVER_INFO_101 pTmpBuf;
@@ -221,6 +224,7 @@ void DirItem::_populateNetwork()
   }
   if (pBuf != NULL)
     NetApiBufferFree(pBuf);
+#endif
 
   //_childs.emplace_back(new DirItem("//DEVSERV1", this, _childCount, Directory));
   //_childCount += 1;
@@ -232,11 +236,12 @@ void DirItem::_populateNetwork()
 DirItem::DirItemType DirItem::_getDeviceType(const QString& devicePath)
 {
   DirItem::DirItemType result;
+#ifdef Q_OS_WIN
   UINT type = GetDriveType((wchar_t *)devicePath.utf16());
   switch (type)
   {
   case DRIVE_REMOVABLE:
-    result = FloppyDrive;
+    result = FlashDrive;
     break;
   case DRIVE_FIXED:
     result = HardDrive;
@@ -254,6 +259,9 @@ DirItem::DirItemType DirItem::_getDeviceType(const QString& devicePath)
     result = Directory;
     break;
   }
+#else
+  result = HardDrive;
+#endif //Q_OS_WIN
 
   return result;
 }

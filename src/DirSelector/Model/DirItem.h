@@ -20,7 +20,7 @@ public:
   {
     Directory,
     HardDrive,
-    FloppyDrive,
+    FlashDrive,
     CDDrive,
     DVDDrive,
     NetDrive,

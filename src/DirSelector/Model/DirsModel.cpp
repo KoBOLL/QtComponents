@@ -1,8 +1,30 @@
 #include <QDebug>
+
+#ifdef Q_OS_WIN
+#include <qt_windows.h>
+#include <Shellapi.h>
+#else
 #include <QApplication>
 #include <QStyle>
+#endif //Q_OS_WIN
 
 #include "DirsModel.h"
+
+#ifdef Q_OS_WIN
+Q_GUI_EXPORT QPixmap qt_pixmapFromWinHICON(HICON icon);
+
+static QPixmap getWinIcon(SHSTOCKICONID id)
+{
+  QPixmap result;
+  SHSTOCKICONINFO sii;
+  memset(&sii, 0, sizeof(SHSTOCKICONINFO));
+  sii.cbSize = sizeof(SHSTOCKICONINFO);
+  SHGetStockIconInfo(id, SHGSI_SMALLICON | SHGSI_ICON, &sii);
+  result = qt_pixmapFromWinHICON(sii.hIcon);
+  DestroyIcon(sii.hIcon);
+  return result;
+}
+#endif //Q_OS_WIN
 
 DirsModel::DirsModel(QObject* parent):
   QAbstractItemModel(parent)
@@ -155,10 +177,21 @@ void DirsModel::fetchMore(const QModelIndex& parent)
 
 void DirsModel::_initIconsCashe()
 {
+#ifdef Q_OS_WIN
+  _icons.insert({DirItem::Directory, getWinIcon(SIID_FOLDER)});
+  _icons.insert({DirItem::HardDrive, getWinIcon(SIID_DRIVEFIXED)});
+  _icons.insert({DirItem::FlashDrive, getWinIcon(SIID_DRIVEREMOVE)});
+  _icons.insert({DirItem::CDDrive, getWinIcon(SIID_DRIVECD)});
+  _icons.insert({DirItem::DVDDrive, getWinIcon(SIID_DRIVEDVD)});
+  _icons.insert({DirItem::NetDrive, getWinIcon(SIID_DRIVENET)});
+  _icons.insert({DirItem::Computer, getWinIcon(SIID_DESKTOPPC)});
+  _icons.insert({DirItem::Network, getWinIcon(SIID_MYNETWORK)});
+  _icons.insert({DirItem::NetworkComputer, getWinIcon(SIID_SERVER)});
+#else
   QStyle* style = QApplication::style();
   _icons.insert({DirItem::Directory, style->standardPixmap(QStyle::SP_DirClosedIcon)});
   _icons.insert({DirItem::HardDrive, style->standardPixmap(QStyle::SP_DriveHDIcon)});
-  _icons.insert({DirItem::FloppyDrive, style->standardPixmap(QStyle::SP_DriveFDIcon)});
+  _icons.insert({DirItem::FlashDrive, style->standardPixmap(QStyle::SP_DriveFDIcon)});
   _icons.insert({DirItem::CDDrive, style->standardPixmap(QStyle::SP_DriveCDIcon)});
   _icons.insert({DirItem::DVDDrive, style->standardPixmap(QStyle::SP_DriveCDIcon)});
   _icons.insert({DirItem::NetDrive, style->standardPixmap(QStyle::SP_DriveNetIcon)});
@@ -166,6 +199,7 @@ void DirsModel::_initIconsCashe()
   _icons.insert({DirItem::Network, style->standardPixmap(QStyle::SP_DirIcon)});
   _icons.insert({DirItem::NetworkComputer,
     style->standardPixmap(QStyle::SP_ComputerIcon)});
+#endif //Q_OS_WIN
 }
 
 void DirsModel::_onDirItemsAdded()
